@@ -102,6 +102,15 @@ def build_amount_lookup(df):
 
 amount_lookup = build_amount_lookup(tb)
 
+def all_contributors_zero(expr):
+    nums = parse_totaling(expr)
+    if not nums:
+        return False  # don't hide if we cannot resolve contributors
+    for n in nums:
+        if abs(amount_lookup.get(n, 0.0)) > 1e-9:
+            return False
+    return True
+
 is_sum_row = tb["Kontotype"].astype(str).str.lower().str.contains("sum")
 
 def compute_total_from_sammentaelling(row):
@@ -118,8 +127,10 @@ tb["_computed_subtotal"] = np.where(is_sum_row, tb.apply(compute_total_from_samm
 
 # ---------- View controls ----------
 st.sidebar.header("Visning")
+show_subtotals = st.sidebar.checkbox('Vis subtotaler', value=True)
 view = st.sidebar.selectbox("Visning", ["Kontoplan-rækkefølge", "Rapporteringskategori"])
 filters = st.sidebar.multiselect("Filter", ["Kun ikke afstemt", "Kun ikke reviewet"])
+show_subtotals = st.sidebar.checkbox("Vis subtotaler", value=True)
 
 # ---------- Balance check ----------
 total_sum = float(tb["_amount"].sum())
@@ -206,7 +217,7 @@ def render_group(df, title=None):
     df = apply_mark_filters(df)
 
     for _, r in df.iterrows():
-        if str(r["Kontotype"]).lower().find("sum") != -1:
+        if str(r["Kontotype"]).lower().find("sum") != -1 and show_subtotals:
             render_sum_row(r)
         else:
             render_account_row(r)
